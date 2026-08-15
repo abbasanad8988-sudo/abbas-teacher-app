@@ -219,14 +219,61 @@ function drawReportImage(sid,month){
  })
 }
 async function shareMonthlyReport(sid){
- let s=stu(sid);if(!s)return;
- if(!s.phone){if(confirm('لا يوجد رقم واتساب لهذا الطالب. هل تريد إضافته الآن؟'))studentCard(sid);return}
- let month=monthList()[new Date().getMonth()%monthList().length],blob=await drawReportImage(sid,month),file=new File([blob],`تقرير_${s.name}_${month}.png`,{type:'image/png'}),text=`تقرير شهري للطالب ${s.name} — الأستاذ عباس عناد — مدرسة محمد ابن أبي بكر`;
- if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){
-  try{await navigator.share({title:'تقرير الطالب',text,files:[file]});return}catch(e){if(e.name==='AbortError')return}
- }
- let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
- window.open('https://wa.me/'+s.phone+'?text='+encodeURIComponent(text+'\nتم إنشاء التقرير كصورة. أرفق الصورة التي تم تنزيلها.'),'_blank');
+  let s=stu(sid);
+  if(!s)return;
+
+  if(!s.phone){
+    if(confirm('لا يوجد رقم واتساب لهذا الطالب. هل تريد إضافته الآن؟')){
+      studentCard(sid);
+    }
+    return;
+  }
+
+  let month=monthList()[new Date().getMonth()];
+  let blob=await drawReportImage(sid,month);
+
+  if(!blob){
+    alert('تعذر إنشاء صورة التقرير');
+    return;
+  }
+
+  let file=new File(
+    [blob],
+    `تقرير_${s.name}.png`,
+    {type:'image/png'}
+  );
+
+  try{
+    if(navigator.share &&
+       navigator.canShare &&
+       navigator.canShare({files:[file]})){
+
+      await navigator.share({
+        title:'تقرير الطالب',
+        text:`تقرير شهري للطالب ${s.name}`,
+        files:[file]
+      });
+
+      return;
+    }
+
+    alert('سيتم تنزيل صورة التقرير لأن جهازك لا يدعم مشاركة الصورة مباشرة.');
+
+    let url=URL.createObjectURL(blob);
+    let a=document.createElement('a');
+    a.href=url;
+    a.download=`تقرير_${s.name}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+  }catch(e){
+    if(e.name!=='AbortError'){
+      alert('حدث خطأ أثناء مشاركة صورة التقرير');
+      console.error(e);
+    }
+  }
 }
 function settings(){
  let w=db.settings.weights;
