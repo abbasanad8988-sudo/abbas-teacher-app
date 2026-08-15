@@ -59,7 +59,7 @@ function finalFor(sid,month){
  const w=db.settings.weights,g=db.grades.filter(x=>x.studentId===sid && (!month||x.month===month));
  const avg=k=>{let a=g.filter(x=>x.type===k).map(x=>+x.value).filter(x=>!isNaN(x));return a.length?a.reduce((a,b)=>a+b,0)/a.length:0};
  const att=attendanceScore(sid);
- return att*w.attendance/100+avg('participation')*w.participation/100+avg('oral')*w.oral/100+avg('quiz')*w.quiz/100+avg('monthly')*w.monthly/100;
+ return att*w.attendance/100+avg('participation')+avg('oral')+avg('quiz')+avg('monthly');
 }
 function attendanceScore(sid){
  let a=db.attendance.filter(x=>x.studentId===sid);
