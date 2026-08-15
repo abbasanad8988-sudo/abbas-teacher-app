@@ -218,7 +218,7 @@ function drawReportImage(sid,month){
   canvas.toBlob(resolve,'image/png');
  })
 }
-async async function shareMonthlyReport(sid){
+async function shareMonthlyReport(sid){
   let s=stu(sid);
   if(!s)return;
 
