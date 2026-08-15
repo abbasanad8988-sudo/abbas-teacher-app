@@ -26,7 +26,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 .bad{color:#c62828;font-weight:bold}.good{color:#198754;font-weight:bold}
 .modal{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;z-index:20;padding:15px}.modal .box{background:white;border-radius:18px;padding:18px;max-width:700px;width:100%;max-height:90vh;overflow:auto}
 .pill{display:inline-block;padding:4px 8px;border-radius:20px;background:#eef4fb;margin:2px;font-size:12px}
-.hide{display:none}.small{font-size:12px;color:#6b7280}.title{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.hide{display:none}.small{font-size:12px;color:#6b7280}.wa{background:#25D366!important;color:#fff!important}.report-card{border:1px solid #e6eaf0}.title{display:flex;justify-content:space-between;align-items:center;gap:10px}
 h2{font-size:19px}h3{font-size:16px}
 @media(max-width:600px){table{font-size:11px}th,td{padding:6px}.desktop{display:none}}
 </style>
@@ -106,16 +106,38 @@ function students(){
 }
 function drawStudents(){
  let cid=classSel.value, arr=db.students.filter(s=>!cid||s.classId===cid);
- studentList.innerHTML=arr.length?`<table><thead><tr><th>#</th><th>الاسم</th><th>الصف</th><th>الدرجة</th><th>إجراء</th></tr></thead><tbody>${arr.map((s,i)=>`<tr><td>${i+1}</td><td>${esc(s.name)}</td><td>${esc(cls(s.classId)?.name||'')}</td><td>${finalFor(s.id,null).toFixed(1)}</td><td><button class="secondary" onclick="studentCard('${s.id}')">كشف</button> <button class="danger" onclick="delStudent('${s.id}')">حذف</button></td></tr>`).join('')}</tbody></table>`:'<p class="small">لا يوجد طلاب.</p>'
+ studentList.innerHTML=arr.length?`<table><thead><tr><th>#</th><th>الاسم</th><th>الصف</th><th>واتساب ولي الأمر</th><th>إجراء</th></tr></thead><tbody>${arr.map((s,i)=>`<tr><td>${i+1}</td><td>${esc(s.name)}</td><td>${esc(cls(s.classId)?.name||'')}</td><td>${s.phone?`<span class="good">✓ ${esc(s.phone)}</span>`:'<span class="small">غير مضاف</span>'}</td><td><button class="secondary" onclick="studentCard('${s.id}')">كشف</button> <button class="danger" onclick="delStudent('${s.id}')">حذف</button></td></tr>`).join('')}</tbody></table>`:'<p class="small">لا يوجد طلاب.</p>'
 }
 function addStudent(){
- open(`<h2>إضافة طالب</h2><label>الصف</label>${classSelect('', 'modalClassSel')}<label>اسم الطالب</label><input id="sn"><div class="row" style="margin-top:12px"><button onclick="saveStudent()">حفظ</button><button class="secondary" onclick="closeM()">إلغاء</button></div>`)
+ open(`<h2>إضافة طالب</h2><label>الصف</label>${classSelect('', 'modalClassSel')}<label>اسم الطالب</label><input id="sn" placeholder="اسم الطالب الكامل"><label>رقم هاتف ولي الأمر — واتساب</label><input id="sphone" type="tel" inputmode="tel" placeholder="07701234567"><div class="small">اكتب الرقم مثل 07701234567 أو +9647xxxxxxxxx.</div><div class="row" style="margin-top:12px"><button onclick="saveStudent()">حفظ</button><button class="secondary" onclick="closeM()">إلغاء</button></div>`)
 }
-function saveStudent(){const c=document.getElementById('modalClassSel'), n=document.getElementById('sn'); if(!c||!c.value||!n||!n.value.trim())return alert('اختر الصف واكتب الاسم'); db.students.push({id:id(),name:n.value.trim(),classId:c.value});save();closeM();students()}
+function normalizePhone(v){
+ v=String(v||'').trim().replace(/[^0-9+]/g,'');
+ if(v.startsWith('+'))v=v.slice(1);
+ if(v.startsWith('00964'))v=v.slice(2);
+ if(v.startsWith('0'))v='964'+v.slice(1);
+ return v;
+}
+function saveStudent(){
+ const c=document.getElementById('modalClassSel'), n=document.getElementById('sn'), p=document.getElementById('sphone');
+ if(!c||!c.value||!n||!n.value.trim())return alert('اختر الصف واكتب الاسم');
+ const phone=normalizePhone(p?.value||'');
+ if(phone && !/^9647\d{9}$/.test(phone))return alert('رقم واتساب العراقي يجب أن يكون مثل 07701234567');
+ db.students.push({id:id(),name:n.value.trim(),classId:c.value,phone});
+ save();closeM();students()
+}
 function bulkStudents(){
- open(`<h2>إضافة عدة طلاب دفعة واحدة</h2><label>الصف</label>${classSelect('', 'modalClassSel')}<label>الأسماء — كل طالب في سطر</label><textarea id="bulk" rows="10" placeholder="أحمد محمد\nعلي حسن\nحسن عباس"></textarea><div class="row" style="margin-top:12px"><button onclick="saveBulk()">إضافة الطلاب</button><button class="secondary" onclick="closeM()">إلغاء</button></div>`)
+ open(`<h2>إضافة عدة طلاب دفعة واحدة</h2><label>الصف</label>${classSelect('', 'modalClassSel')}<label>الأسماء — كل طالب في سطر</label><textarea id="bulk" rows="10" placeholder="أحمد محمد\nعلي حسن\nحسن عباس"></textarea><label>أرقام واتساب أولياء الأمور — اختياري، بنفس ترتيب الأسماء</label><textarea id="bulkPhones" rows="5" placeholder="07701234567\n07701234568\n07701234569"></textarea><div class="small">يمكن ترك الأرقام فارغة وإضافتها لاحقًا من كشف الطالب.</div><div class="row" style="margin-top:12px"><button onclick="saveBulk()">إضافة الطلاب</button><button class="secondary" onclick="closeM()">إلغاء</button></div>`)
 }
-function saveBulk(){const c=document.getElementById('modalClassSel'), b=document.getElementById('bulk'); let names=(b?.value||'').split(/\n/).map(x=>x.trim()).filter(Boolean); if(!c||!c.value||!names.length)return alert('اختر الصف واكتب الأسماء'); names.forEach(n=>db.students.push({id:id(),name:n,classId:c.value}));save();closeM();students()}
+function saveBulk(){
+ const c=document.getElementById('modalClassSel'), b=document.getElementById('bulk'), bp=document.getElementById('bulkPhones');
+ let names=(b?.value||'').split(/\n/).map(x=>x.trim()).filter(Boolean);
+ let phones=(bp?.value||'').split(/\n/).map(x=>normalizePhone(x)).filter(Boolean);
+ if(!c||!c.value||!names.length)return alert('اختر الصف واكتب الأسماء');
+ if(phones.length && phones.length!==names.length)return alert('عدد أرقام واتساب يجب أن يساوي عدد الأسماء أو اترك الأرقام فارغة');
+ names.forEach((n,i)=>db.students.push({id:id(),name:n,classId:c.value,phone:phones[i]||''}));
+ save();closeM();students()
+}
 function delStudent(i){if(confirm('حذف الطالب وكل درجاته وحضوره؟')){db.students=db.students.filter(s=>s.id!==i);db.grades=db.grades.filter(g=>g.studentId!==i);db.attendance=db.attendance.filter(a=>a.studentId!==i);save();students()}}
 function attendance(){
  let today=new Date().toISOString().slice(0,10);
@@ -156,8 +178,45 @@ function exportCSV(){
 }
 function printReport(){window.print()}
 function studentCard(sid){
- let s=stu(sid);let rows=monthList().map(m=>`<tr><td>${m}</td><td>${finalFor(sid,m).toFixed(1)}</td></tr>`).join('');
- open(`<h2>كشف الطالب: ${esc(s.name)}</h2><p>الصف: ${esc(cls(s.classId)?.name||'')}</p><table><thead><tr><th>الشهر</th><th>النهائي</th></tr></thead><tbody>${rows}</tbody></table><h3>الحضور العام: ${attendanceScore(sid).toFixed(1)}%</h3><button onclick="closeM()">إغلاق</button>`)
+ let s=stu(sid), clsName=cls(s.classId)?.name||'', rows=monthList().map(m=>`<tr><td>${m}</td><td>${finalFor(sid,m).toFixed(1)}</td></tr>`).join('');
+ open(`<h2>كشف الطالب: ${esc(s.name)}</h2><p>الصف: ${esc(clsName)}</p>
+ <label>رقم واتساب ولي الأمر</label><input id="editPhone" type="tel" inputmode="tel" value="${esc(s.phone||'')}" placeholder="07701234567">
+ <div class="row" style="margin:10px 0"><button onclick="saveStudentPhone('${sid}')">حفظ الرقم</button><button class="wa" onclick="shareMonthlyReport('${sid}')">📲 إرسال التقرير عبر واتساب</button></div>
+ <div class="card report-card"><h3>تقرير شهري</h3><p class="small">صادر من قبل الأستاذ عباس عناد — أستاذ مادة اللغة الإنجليزية — مدرسة محمد ابن أبي بكر</p>
+ <table><thead><tr><th>الشهر</th><th>الدرجة</th></tr></thead><tbody>${rows}</tbody></table><h3>الحضور العام: ${attendanceScore(sid).toFixed(1)}%</h3></div>
+ <div class="row"><button class="secondary" onclick="closeM()">إغلاق</button></div>`)
+}
+function saveStudentPhone(sid){
+ let s=stu(sid),p=normalizePhone(document.getElementById('editPhone')?.value||'');
+ if(p && !/^9647\d{9}$/.test(p))return alert('رقم واتساب العراقي يجب أن يكون مثل 07701234567');
+ s.phone=p;save();studentCard(sid)
+}
+function reportRowsFor(sid,month){
+ let types=[['participation','المشاركة'],['oral','الشفهي'],['quiz','Quiz'],['monthly','الشهري']];
+ return types.map(([t,n])=>{let a=db.grades.filter(g=>g.studentId===sid&&g.type===t&&(!month||g.month===month)).map(g=>+g.value);let v=a.length?a.reduce((x,y)=>x+y,0)/a.length:0;return [n,v.toFixed(1)]});
+}
+function drawReportImage(sid,month){
+ return new Promise(resolve=>{
+  let s=stu(sid), c=cls(s.classId), canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;let x=canvas.getContext('2d');
+  x.fillStyle='#f5f8fc';x.fillRect(0,0,1080,1350);x.fillStyle='#1769c2';x.fillRect(0,0,1080,190);
+  x.fillStyle='#fff';x.textAlign='right';x.direction='rtl';x.font='bold 42px Tahoma,Arial';x.fillText('تقرير شهري للطالب',1020,75);
+  x.font='26px Tahoma,Arial';x.fillText('صادر من قبل الأستاذ عباس عناد',1020,125);x.font='22px Tahoma,Arial';x.fillText('أستاذ مادة اللغة الإنجليزية — مدرسة محمد ابن أبي بكر',1020,160);
+  x.fillStyle='#172033';x.font='bold 34px Tahoma,Arial';x.fillText(s.name,980,260);x.font='25px Tahoma,Arial';x.fillText('الصف: '+(c?.name||'غير محدد'),980,305);x.fillText('الشهر: '+(month||'الشهر الحالي'),980,345);
+  x.strokeStyle='#d9e1eb';x.lineWidth=2;x.strokeRect(70,390,940,620);x.fillStyle='#1769c2';x.font='bold 28px Tahoma,Arial';x.fillText('المؤشر',950,445);x.fillText('النتيجة',520,445);
+  let y=505;reportRowsFor(sid,month).forEach(r=>{x.fillStyle='#172033';x.font='26px Tahoma,Arial';x.fillText(r[0],950,y);x.fillText(r[1]+' / 100',520,y);y+=95});
+  x.fillText('الحضور',950,y);x.fillText(attendanceScore(sid).toFixed(1)+'%',520,y);y+=110;x.font='bold 28px Tahoma,Arial';x.fillText('ملاحظات',950,y);x.font='23px Tahoma,Arial';x.fillText('التقرير يوضح مستوى الحضور والدرجات والنشاط خلال الشهر.',950,y+50);x.fillText('مع تمنياتنا للطالب بالمزيد من التقدم والنجاح.',950,y+90);
+  canvas.toBlob(resolve,'image/png');
+ })
+}
+async function shareMonthlyReport(sid){
+ let s=stu(sid);if(!s)return;
+ if(!s.phone){if(confirm('لا يوجد رقم واتساب لهذا الطالب. هل تريد إضافته الآن؟'))studentCard(sid);return}
+ let month=monthList()[new Date().getMonth()%monthList().length],blob=await drawReportImage(sid,month),file=new File([blob],`تقرير_${s.name}_${month}.png`,{type:'image/png'}),text=`تقرير شهري للطالب ${s.name} — الأستاذ عباس عناد — مدرسة محمد ابن أبي بكر`;
+ if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){
+  try{await navigator.share({title:'تقرير الطالب',text,files:[file]});return}catch(e){if(e.name==='AbortError')return}
+ }
+ let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+ window.open('https://wa.me/'+s.phone+'?text='+encodeURIComponent(text+'\nتم إنشاء التقرير كصورة. أرفق الصورة التي تم تنزيلها.'),'_blank');
 }
 function settings(){
  let w=db.settings.weights;
