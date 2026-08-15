@@ -218,7 +218,7 @@ function drawReportImage(sid,month){
   canvas.toBlob(resolve,'image/png');
  })
 }
-async function shareMonthlyReport(sid){
+async async function shareMonthlyReport(sid){
   let s=stu(sid);
   if(!s)return;
 
@@ -244,20 +244,16 @@ async function shareMonthlyReport(sid){
   );
 
   try{
-    if(navigator.share &&
-       navigator.canShare &&
-       navigator.canShare({files:[file]})){
-
-      await navigator.share({
-        title:'تقرير الطالب',
-        text:`تقرير شهري للطالب ${s.name}`,
-        files:[file]
-      });
-
-      return;
+    if(navigator.share){
+      if(!navigator.canShare || navigator.canShare({files:[file]})){
+        await navigator.share({
+          title:'تقرير الطالب',
+          text:`تقرير شهري للطالب ${s.name}`,
+          files:[file]
+        });
+        return;
+      }
     }
-
-    alert('سيتم تنزيل صورة التقرير لأن جهازك لا يدعم مشاركة الصورة مباشرة.');
 
     let url=URL.createObjectURL(blob);
     let a=document.createElement('a');
@@ -268,10 +264,22 @@ async function shareMonthlyReport(sid){
     a.remove();
     URL.revokeObjectURL(url);
 
+    alert('تم حفظ صورة التقرير. يمكنك إرسالها عبر واتساب.');
+    
   }catch(e){
     if(e.name!=='AbortError'){
-      alert('حدث خطأ أثناء مشاركة صورة التقرير');
       console.error(e);
+
+      let url=URL.createObjectURL(blob);
+      let a=document.createElement('a');
+      a.href=url;
+      a.download=`تقرير_${s.name}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      alert('تعذر فتح المشاركة. تم حفظ صورة التقرير لإرسالها يدويًا.');
     }
   }
 }
